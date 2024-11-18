@@ -1,5 +1,5 @@
 <?php
-namespace Jiny\Site\CMS;
+namespace Jiny\Site\Chat;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Blade;
@@ -7,9 +7,9 @@ use Illuminate\View\Compilers\BladeCompiler;
 use Illuminate\Support\Facades\File;
 use Livewire\Livewire;
 
-class JinySiteCMSServiceProvider extends ServiceProvider
+class JinySiteChatServiceProvider extends ServiceProvider
 {
-    private $package = "jiny-site-cms";
+    private $package = "jiny-site-chat";
     public function boot()
     {
         // 모듈: 라우트 설정
