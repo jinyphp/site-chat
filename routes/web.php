@@ -14,11 +14,6 @@ Route::middleware(['web','auth'])
 
     Route::get('/invite/{code}',[\Jiny\Site\Chat\Http\Controllers\SiteChatInvite::class,
         "index"]);
-
-    // Route::get('/partner/type',[\Jiny\Site\Http\Controllers\Admin\AdminPartnerType::class,
-    //     "index"]);
-    // Route::get('/partner/invoice',[\Jiny\Site\Http\Controllers\Admin\AdminPartnerInvoice::class,
-    //     "index"]);
 });
 
 

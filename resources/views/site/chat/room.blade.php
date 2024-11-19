@@ -29,15 +29,18 @@
                             </p>
 
                             <div class="mt-2">
-                                <button type="button" class="btn btn-sm btn-outline-danger"
-                                    wire:click="delete('{{$room->id}}')">
-                                    삭제
-                                </button>
+                                @if($room->is_owner)
+                                    <button type="button" class="btn btn-sm btn-outline-danger"
+                                        wire:click="delete('{{$room->id}}')">
+                                        삭제
+                                    </button>
 
-                                <button type="button" class="btn btn-sm btn-outline-primary"
-                                    wire:click="edit('{{$room->id}}')">
-                                    수정
-                                </button>
+
+                                    <button type="button" class="btn btn-sm btn-outline-primary"
+                                        wire:click="edit('{{$room->id}}')">
+                                        수정
+                                    </button>
+                                @endif
 
                                 <button type="button" class="btn btn-sm btn-outline-secondary"
                                     onclick="navigator.clipboard.writeText('/home/chat/invite/{{$room->invite}}')">

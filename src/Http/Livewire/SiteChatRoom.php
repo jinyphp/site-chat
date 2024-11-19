@@ -23,6 +23,8 @@ class SiteChatRoom extends Component
     public $forms = [];
     public $viewFile;
 
+    //public $permitEdit = false;
+
     public function mount()
     {
         if(!$this->viewFile) {
@@ -39,6 +41,17 @@ class SiteChatRoom extends Component
             ->select('site_chat.*')
             ->paginate(8);
 
+
+        $rooms = DB::table('site_chat_room')
+            ->where('email', Auth::user()->email)
+            ->get();
+        $rooms = $rooms->keyBy('code');
+
+
+        foreach($rows as &$row) {
+            $code = $row->code;
+            $row->is_owner = $rooms[$code]->is_owner;
+        }
 
         return view($this->viewFile,[
             'rooms' => $rows
@@ -95,6 +108,26 @@ class SiteChatRoom extends Component
 
         $connection = DB::connection('chat');
 
+        // 메세지 분할 테이블
+        Schema::connection('chat')
+        ->create('site_chat_block', function (Blueprint $table) {
+            $table->id();
+            $table->timestamps();
+
+            $table->string('year')->nullable();
+            $table->string('month')->nullable();
+
+        });
+
+        $year = date('Y');
+        $month = date('m');
+        $connection->table('site_chat_block')->insert([
+            [
+                'year' => $year,
+                'month' => $month
+            ]
+        ]);
+
         // Schema 클래스 사용을 위한 use 구문 추가 필요
         Schema::connection('chat')->create('site_chat_message', function (Blueprint $table) {
             $table->id();
@@ -109,8 +142,6 @@ class SiteChatRoom extends Component
             $table->string('receiver_id')->nullable();
             $table->enum('direction', ['send', 'receive'])->default('send');
             $table->timestamp('read_at')->nullable();
-
-
 
             $table->string('user_id')->nullable();
             $table->string('user_name')->nullable();

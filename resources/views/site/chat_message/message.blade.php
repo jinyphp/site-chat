@@ -2,6 +2,13 @@
     {{-- <h2>메시지 {{ $partner_id }}</h2> --}}
     <!-- 페이지네이션 -->
 
+
+    {{-- <select class="form-control" wire:model="selectYear">
+        @foreach($years as $year)
+            <option value="{{ $year }}">{{ $year }}</option>
+        @endforeach
+    </select> --}}
+
     <div class="d-flex justify-content-between align-items-center my-4">
         <div>
             전체 {{$rows->total()}}개의 메시지가 존재합니다.

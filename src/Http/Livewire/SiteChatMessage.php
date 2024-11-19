@@ -18,7 +18,11 @@ class SiteChatMessage extends Component
     public $direction = 'send';
     public $uploadFile;
     public $dbfile;
+
     public $chat = [];
+
+    public $years = [];
+    public $selectYear;
 
     public function mount()
     {
@@ -33,19 +37,21 @@ class SiteChatMessage extends Component
         $this->dbfile = $path.DIRECTORY_SEPARATOR.$this->code.'.sqlite';
         //dd($this->dbfile);
 
-        $chat = $this->db('chat')->table('site_chat_message')->get();
+        $chat = DB::table('site_chat')->get();
         $this->chat = get_object_vars($chat); // 객체를 배열로 변환
+
+        $years = $this->db('chat')->table('site_chat_block')->get();
+        $this->years = [];
+        $this->selectYear = date('Y');
+        foreach($years as $item) {
+            $this->years[] = $item->year;
+        }
+        //   $this->years = get_object_vars($years); // 객체를 배열로 변환
     }
+
 
     private function db($name)
     {
-        // return DB::connection([
-        //     'driver' => 'sqlite',
-        //     'database' => $this->dbfile,
-        //     'prefix' => '',
-        //     'foreign_key_constraints' => true,
-        // ]);
-
         config(['database.connections.'.$name => [
             'driver' => 'sqlite',
             'database' => $this->dbfile,
