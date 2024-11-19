@@ -25,7 +25,14 @@ class JinySiteChatServiceProvider extends ServiceProvider
     {
         /* 라이브와이어 컴포넌트 등록 */
         $this->app->afterResolving(BladeCompiler::class, function () {
-            
+            Livewire::component('site-chat-room',
+                \Jiny\Site\Chat\Http\Livewire\SiteChatRoom::class);
+
+            Livewire::component('site-chat-message',
+                \Jiny\Site\Chat\Http\Livewire\SiteChatMessage::class);
+
+            Livewire::component('site-chat-user',
+                \Jiny\Site\Chat\Http\Livewire\SiteChatUser::class);
 
         });
     }
