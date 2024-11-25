@@ -13,11 +13,11 @@ class JinySiteChatServiceProvider extends ServiceProvider
     public function boot()
     {
         // 모듈: 라우트 설정
-        $this->loadRoutesFrom(__DIR__.'/../routes/web.php');
-        $this->loadViewsFrom(__DIR__.'/../resources/views', $this->package);
+        $this->loadRoutesFrom(__DIR__.'/routes/web.php');
+        $this->loadViewsFrom(__DIR__.'/resources/views', $this->package);
 
         // 데이터베이스
-        $this->loadMigrationsFrom(__DIR__.'/../databases/migrations');
+        $this->loadMigrationsFrom(__DIR__.'/databases/migrations');
 
     }
 
