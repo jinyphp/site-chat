@@ -1,7 +1,5 @@
 <div>
-    <h5>
-        <a href="/home/chat" style="text-decoration:none; color:inherit;">채팅 목록</a>
-    </h5>
+    
     <ul class="list-group">
         @foreach($rooms as $room)
             <li class="list-group-item {{ ($room->code == $code) ? 'active' : '' }}">

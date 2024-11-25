@@ -25,7 +25,10 @@ return new class extends Migration
 
             // 참가자
             $table->string('email')->nullable();
+            $table->string('name')->nullable();
             $table->string('user_id')->nullable();
+
+            $table->string('lang')->nullable();
 
             $table->boolean('is_owner')->default(false); // 방장 여부
 

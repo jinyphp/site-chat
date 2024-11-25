@@ -26,8 +26,9 @@ class SiteChatUser extends Component
     public function mount()
     {
         $chat =DB::table('site_chat')->first();
-        //dd($chat);
         $this->chat = get_object_vars($chat); // 객체를 배열로 변환
+
+
     }
 
     public function render()
@@ -58,15 +59,40 @@ class SiteChatUser extends Component
         if($this->forms['email']) {
             DB::table('site_chat_room')->insert([
                 'code' => $this->code,
-                'email' => $this->forms['email']
+                'email' => $this->forms['email'],
+                'lang' => $this->forms['lang']
             ]);
         }
-        //$this->popupForm = false;
+
+        $this->forms = [];
+        $this->popupForm = false;
+    }
+
+    public function edit($id)
+    {
+        $this->popupForm = true;
+        $this->row = DB::table('site_chat_room')->where('id', $id)->first();
+        $this->forms = get_object_vars($this->row);
+    }
+
+    public function update()
+    {
+        $id = $this->forms['id'];
+        unset($this->forms['id']);
+
+        DB::table('site_chat_room')
+            ->where('id', $id)
+            ->update($this->forms);
+
+        $this->forms = [];
+        $this->popupForm = false;
     }
 
     public function remove($id)
     {
         DB::table('site_chat_room')->where('id', $id)->delete();
+        $this->forms = [];
+        $this->popupForm = false;
     }
 
     public function exit()

@@ -1,11 +1,31 @@
 <x-www-app>
     <x-www-layout>
+        <section class="py-5 bg-light mb-4">
+            <div class="container">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h2>채팅 목록</h2>
+                    </div>
+                    <div>
+                        <!-- Breadcrumb -->
+                        <nav class="pb-2 pb-md-3" aria-label="breadcrumb">
+                            <ol class="breadcrumb">
+                                <li class="breadcrumb-item"><a href="home-contractors.html">Home</a></li>
+                                <li class="breadcrumb-item active" aria-current="page">Chat</li>
+                            </ol>
+                        </nav>
+                    </div>
+                </div>
+                <p>
+                    채팅방 기능을 통하여 간단한 소통을 할 수 있습니다.
+                    채팅 목록은 별도의 데이터베이스에 저장기록 되고 다운로드 받을 수 있습니다.
+                </p>
+            </div>
+        </section>
+
         <x-www-main>
-            <h2>채팅</h2>
-            <p>채팅방 기능을 통하여 정보를 서로 공유할 수 있습니다. 팀원의 업무진행 및 파트너와 함께 업무 소통을 진행할 수 있습니다.</p>
-
             @livewire('site-chat-room')
-
         </x-www-main>
+
     </x-www-layout>
 </x-www-app>

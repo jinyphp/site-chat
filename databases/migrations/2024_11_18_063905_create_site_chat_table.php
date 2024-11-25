@@ -22,9 +22,9 @@ return new class extends Migration
 
             // 채팅방 코드
             $table->string('code')->nullable();
+
             // 채팅방 비밀번호
             $table->string('password')->nullable();
-
 
             $table->string('image')->nullable();
             $table->string('title')->nullable();

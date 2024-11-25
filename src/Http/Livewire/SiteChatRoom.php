@@ -9,21 +9,24 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Livewire\WithFileUploads;
+use Livewire\Attributes\On;
 
+
+/**
+ * 채팅 목록
+ */
 class SiteChatRoom extends Component
 {
-    use WithFileUploads;
-
     public $code;
 
-    //public $partners;
+    use WithFileUploads;
+
     public $popupForm = false;
     public $popupEdit = false;
     public $popupWindowWidth = '2xl';
     public $forms = [];
     public $viewFile;
 
-    //public $permitEdit = false;
 
     public function mount()
     {
@@ -34,39 +37,60 @@ class SiteChatRoom extends Component
 
     public function render()
     {
-        //$rows = DB::table('site_chat')->paginate(8);
-        $rows = DB::table('site_chat')
-            ->join('site_chat_room', 'site_chat.code', '=', 'site_chat_room.code')
-            ->where('site_chat_room.email', Auth::user()->email)
-            ->select('site_chat.*')
-            ->paginate(8);
-
-
-        $rooms = DB::table('site_chat_room')
-            ->where('email', Auth::user()->email)
-            ->get();
-        $rooms = $rooms->keyBy('code');
-
-
-        foreach($rows as &$row) {
-            $code = $row->code;
-            $row->is_owner = $rooms[$code]->is_owner;
-        }
+        // 나의 채팅방
+        $rows = $this->myChat();
+        $rows = $this->myChatRoom($rows); // 권환체크
 
         return view($this->viewFile,[
             'rooms' => $rows
         ]);
     }
 
+    private function myChat()
+    {
+        $rows = DB::table('site_chat')
+            ->join('site_chat_room', 'site_chat.code', '=', 'site_chat_room.code')
+            ->where('site_chat_room.email', Auth::user()->email)
+            ->select('site_chat.*')
+            ->paginate(8);
+
+        return $rows;
+    }
+
+    private function myChatRoom($rows)
+    {
+        // 채팅방 정보, 권환체크
+        $rooms = DB::table('site_chat_room')
+            ->where('email', Auth::user()->email)
+            ->get();
+
+        $rooms = $rooms->keyBy('code');
+
+        foreach($rows as &$row) {
+            $code = $row->code;
+            $row->is_owner = $rooms[$code]->is_owner;
+        }
+
+        return $rows;
+    }
+
+    /**
+     * 새로운 채팅방 개설
+     */
+    #[On('room-created')]
     public function create()
     {
         $this->popupForm = true;
         $this->forms = [];
     }
 
+    /**
+     * 새로운 채팅방 저장
+     */
     public function store()
     {
         if(isset($this->forms['title'])) {
+            // 채팅방 코드 생성
             $hash = hash('sha256', $this->forms['title'] . date('Y-m-d H:i:s'));
             $this->forms['code'] = substr($hash, 0, 8);
             $this->forms['created_at'] = date('Y-m-d H:i:s');
@@ -80,11 +104,12 @@ class SiteChatRoom extends Component
 
         // 채팅방 데이터베이스 생성
         $path = database_path('chat');
-        // 해시코드를 이용한 서브 디렉토리 생성
         $code = $this->forms['code'];
         $path .= DIRECTORY_SEPARATOR.substr($code,0,2);
         $path .= DIRECTORY_SEPARATOR.substr($code,2,2);
+        $path .= DIRECTORY_SEPARATOR.substr($code,4,2);
         if (!is_dir($path)) {
+            // 해시코드를 이용한 서브 디렉토리 생성
             mkdir($path, 0755, true);
         }
 
@@ -94,7 +119,7 @@ class SiteChatRoom extends Component
             return false;
         }
 
-        //touch($path);
+        //새로운 SQLite 파일 생성
         file_put_contents($dbfile, '');
 
         // 새로운 DB 연결 설정
@@ -119,24 +144,36 @@ class SiteChatRoom extends Component
 
         });
 
-        $year = date('Y');
-        $month = date('m');
-        $connection->table('site_chat_block')->insert([
-            [
-                'year' => $year,
-                'month' => $month
-            ]
-        ]);
+        // $year = date('Y');
+        // $month = date('m');
+        // $connection->table('site_chat_block')->insert([
+        //     [
+        //         'year' => $year,
+        //         'month' => $month
+        //     ]
+        // ]);
 
         // Schema 클래스 사용을 위한 use 구문 추가 필요
-        Schema::connection('chat')->create('site_chat_message', function (Blueprint $table) {
+        Schema::connection('chat')
+        ->create('site_chat_message', function (Blueprint $table) {
             $table->id();
             $table->timestamps();
 
-            $table->string('partner_id')->nullable();
-            $table->string('partner_name')->nullable();
+            //$table->string('partner_id')->nullable();
+            //$table->string('partner_name')->nullable();
+            $table->string('code')->nullable();
 
+            $table->string('lang')->nullable();
             $table->text('message')->nullable();
+
+            // 다국어
+            $table->text('message_ko')->nullable();
+            $table->text('message_en')->nullable();
+            $table->text('message_ja')->nullable();
+            $table->text('message_zh')->nullable(); // 중국어
+            $table->text('message_fr')->nullable();
+            $table->text('message_de')->nullable();
+
             $table->string('image')->nullable();
             $table->string('sender_id')->nullable();
             $table->string('receiver_id')->nullable();
@@ -149,8 +186,10 @@ class SiteChatRoom extends Component
             $table->string('manager')->nullable();
         });
 
-        // 맴버추가
-        DB::table('site_chat_room')->insert([
+        // 채팅방 목록에, 참여 맴버 추가
+        // 개설한 사용자는 방장이다.
+        DB::table('site_chat_room')
+        ->insert([
             'code' => $this->forms['code'],
             'email' => Auth::user()->email,
             'user_id' => Auth::user()->id,
@@ -171,6 +210,7 @@ class SiteChatRoom extends Component
             $path = database_path('chat');
             $path .= DIRECTORY_SEPARATOR.substr($code,0,2);
             $path .= DIRECTORY_SEPARATOR.substr($code,2,2);
+            $path .= DIRECTORY_SEPARATOR.substr($code,4,2);
 
             $dbfile = $path.'/'.$code.'.sqlite';
             if(file_exists($dbfile)) {
@@ -196,15 +236,24 @@ class SiteChatRoom extends Component
             // 임시 저장
             $tempPath = $uploadFile->store('temp', 'public');
 
+            // public 경로 생성
             // 최종 저장 경로 생성
             $targetDir = public_path('images/chat');
-            if (!file_exists($targetDir)) {
-                mkdir($targetDir, 0777, true);
+            $code = $this->forms['code'];
+            $path = DIRECTORY_SEPARATOR.substr($code,0,2);
+            $path .= DIRECTORY_SEPARATOR.substr($code,2,2);
+            $path .= DIRECTORY_SEPARATOR.substr($code,4,2);
+            if (!is_dir($targetDir.$path)) {
+                mkdir($targetDir.$path, 0777, true);
             }
 
             // 파일 이동
             $filename = basename($tempPath);
-            $targetPath = 'images/chat/'.$filename;
+            $code = $this->forms['code'];
+            $path = substr($code,0,2);
+            $path .= '/'.substr($code,2,2);
+            $path .= '/'.substr($code,4,2);
+            $targetPath = 'images/chat/'.$path.'/'.$filename;
             rename(storage_path('app/public/'.$tempPath), public_path($targetPath));
 
             // 이미지 경로 저장
@@ -214,7 +263,13 @@ class SiteChatRoom extends Component
             $uploadFile = null;
         }
 
-        DB::table('site_chat')->where('id', $id)->update($this->forms);
+        unset($this->forms['id']);
+        $this->forms['updated_at'] = date('Y-m-d H:i:s');
+
+        DB::table('site_chat')
+            ->where('id', $id)
+            ->update($this->forms);
+
         $this->popupEdit = false;
     }
 }

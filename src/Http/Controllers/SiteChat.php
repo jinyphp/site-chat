@@ -10,6 +10,10 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
 
+/**
+ * 사용자 로그인
+ * 채팅 서비스 목록
+ */
 use Jiny\Site\Http\Controllers\SiteController;
 class SiteChat extends SiteController
 {
@@ -18,7 +22,11 @@ class SiteChat extends SiteController
         parent::__construct();
         $this->setVisit($this);
 
-        $this->actions['view']['layout'] = "jiny-site-chat::site.chat.layout";
+        // 채팅 서비스 레이아웃
+        $this->actions['view']['layout']
+            = inSlotView("home.chat",
+                "jiny-site-chat::site.chat.layout");
+
     }
 
 }
