@@ -11,14 +11,15 @@
     ],
     "minimum-stability": "dev",
     "require": {
-        "php": "^8.2"
+        "php": "^8.2",
+        "stichoza/google-translate-php": "^5.2"
     },
     "autoload": {
         "psr-4": {
-            "Jiny\\Site\\Chat\\":"src/"
+            "Jiny\\Site\\Chat\\":"/"
         },
         "files" : [
-            "src/Helpers/Helper.php"
+            "Helpers/Helper.php"
         ]
     },
     "autoload-dev": {
