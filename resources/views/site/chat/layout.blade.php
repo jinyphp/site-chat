@@ -18,13 +18,16 @@
                 </div>
                 <p>
                     채팅방 기능을 통하여 간단한 소통을 할 수 있습니다.
-                    채팅 목록은 별도의 데이터베이스에 저장기록 되고 다운로드 받을 수 있습니다.
+                    채팅 메시지 로그는 분산된 데이터베이스에 기록됩니다.
                 </p>
             </div>
         </section>
 
         <x-www-main>
             @livewire('site-chat-room')
+
+            <hr>
+
         </x-www-main>
 
     </x-www-layout>

@@ -40,6 +40,14 @@ return new class extends Migration
             // 초대 코드
             $table->string('invite')->nullable();
 
+            // 채팅 암호화 키
+            $table->string('salt')->nullable();
+
+            // 채팅 참여자 수
+            $table->integer('user_cnt')->default(0);
+
+            // 마지막 메시지 시간
+            $table->timestamp('last_message_at')->nullable();
         });
     }
 

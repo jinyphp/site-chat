@@ -17,19 +17,62 @@
             </div>
         </div>
         <div class="col-12 col-md-4 text-center">
-            {{ $rows->onEachSide(2)->links('pagination::bootstrap-4') }}
+            @if($rows->lastPage() > 1)
+                <div class="pagination">
+                    {{-- 이전 페이지 --}}
+                    @if($rows->currentPage() > 1)
+                        @if($rows->currentPage() > 10)
+                            <a href="/home/chat/message/{{ $code }}?page={{ floor(($rows->currentPage()-1)/10) * 10 }}" class="btn btn-sm btn-outline-secondary">
+                                이전
+                            </a>
+                        @else
+                            {{-- <a href="/home/chat/message/{{ $code }}?page={{ $rows->currentPage()-1 }}" class="btn btn-sm btn-outline-secondary">
+                                이전
+                            </a> --}}
+                        @endif
+                    @endif
+
+                    {{-- 페이지 번호 --}}
+                    @for($i = 1; $i <= $rows->lastPage(); $i++)
+                        <a href="/home/chat/message/{{ $code }}?page={{ $i }}"
+                            class="btn btn-sm {{ $rows->currentPage() == $i ? 'btn-primary' : 'btn-outline-secondary' }}">
+                            {{ $i }}
+                        </a>
+                    @endfor
+
+                    {{-- 다음 페이지 --}}
+                    @if($rows->currentPage() < $rows->lastPage())
+                        @if($rows->lastPage() > 10)
+                            <a href="/home/chat/message/{{ $code }}?page={{ $rows->currentPage()+1 }}"
+                                class="btn btn-sm btn-outline-secondary">
+                                다음
+                            </a>
+                        @else
+                            {{-- <a href="/home/chat/message/{{ $code }}?page={{ $rows->currentPage()+1 }}"
+                                class="btn btn-sm btn-outline-secondary">
+                                다음
+                            </a> --}}
+                        @endif
+                    @endif
+                </div>
+            @endif
         </div>
         <div class="col-12 col-md-4 text-end">
             전체 {{ $rows->total() }}개 메시지
         </div>
     </div>
 
+    {{-- {{ $poll }} / {{ $poll_cnt }} --}}
 
-    {{-- 메시지 pull --}}
-    <div wire:poll.{{ $poll }}s>
+    <div wire:poll.{{ $poll }}s="refreshData">
+    </div>
+
+    {{-- 메시지 pull  --}}
+    <div >
+
         <div class="flex flex-col space-y-4 p-4 mb-4 rounded
             {{ isset($chat['bg_color']) ? $chat['bg_color'] : 'bg-gray-50' }}">
-            @foreach ($rows as $msg)
+            @foreach ($rows->reverse() as $msg)
                 {{-- 메시지 방향, 내글 오른쪽 배치 --}}
                 <div class="flex {{ $msg->user_id == auth()->id() ? 'justify-end' : 'justify-start' }}">
 
@@ -72,17 +115,21 @@
                                     <div class="text-sm">
                                         {!! nl2br(e($msg->message)) !!}
                                     </div>
+                                    @if($msg->lang != $lang)
                                     <div class="text-sm" style="border-left: 1px solid #000; padding-left: 10px;">
                                         {{-- {!! nl2br(e($msg->message_ko)) !!} --}}
                                         {{ chatTranslateTo($msg, $lang, $code) }}
-
                                     </div>
+                                    @endif
                                 </div>
                             @endif
                         @endif
 
                         {{-- 메시지 정보 --}}
                         <div class="d-flex gap-2  align-items-center {{ $msg->user_id == auth()->id() ? 'justify-content-end' : 'justify-content-start' }}">
+
+
+
                             @if ($msg->image)
                             <a href="{{ $msg->image }}" download class="text-xs text-gray-500 mt-1">
                                 다운로드
@@ -106,19 +153,39 @@
                                 </span>
                             @endif
                         </div>
+
                     </div>
 
                     {{-- 아바타 이미지 --}}
-                    @if ($msg->user_id != auth()->id())
-                    <div class="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center ml-2">
-                        @if ($msg->user_id)
-                            <img src="/home/avatas/{{ $msg->user_id }}" alt="User Avatar"
-                                class="w-8 h-8 rounded-full">
-                        @else
-                            <div class="w-4 h-4 bg-gray-500 rounded-full"></div>
+                    <div class="d-flex flex-column">
+                        @if ($msg->user_id != auth()->id())
+
+                        <div class="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center ml-2">
+                            @if ($msg->user_id)
+                                <img src="/home/avatas/{{ $msg->user_id }}" alt="User Avatar"
+                                    class="w-8 h-8 rounded-full">
+                            @else
+                                <div class="w-4 h-4 bg-gray-500 rounded-full"></div>
+                            @endif
+                        </div>
+                        @endif
+
+                        {{-- 읽음 표시 --}}
+                        @if ($msg->is_read)
+                        <span class="text-xs text-gray-500 w-6 mt-1 ml-2">
+                                @php
+                                    $rcount = count(explode(',', $msg->is_read));
+                                    $count = count($chat_members);
+                                @endphp
+                                @if($count > $rcount)
+                                    {{ $count-$rcount }}
+                                @else
+                                읽음
+                                @endif
+                            </span>
                         @endif
                     </div>
-                    @endif
+
 
                 </div>
             @endforeach

@@ -62,10 +62,17 @@ class SiteChatUser extends Component
                 'email' => $this->forms['email'],
                 'lang' => $this->forms['lang']
             ]);
+
+            // 채팅 수 증가
+            DB::table('site_chat')
+                ->where('code', $this->code)
+                ->increment('user_cnt');
         }
 
         $this->forms = [];
         $this->popupForm = false;
+
+        $this->dispatch('refresh-user');
     }
 
     public function edit($id)
@@ -86,11 +93,19 @@ class SiteChatUser extends Component
 
         $this->forms = [];
         $this->popupForm = false;
+
+        $this->dispatch('refresh-user');
     }
 
     public function remove($id)
     {
         DB::table('site_chat_room')->where('id', $id)->delete();
+
+        // 채팅 수 감소
+        DB::table('site_chat')
+            ->where('code', $this->code)
+            ->decrement('user_cnt');
+
         $this->forms = [];
         $this->popupForm = false;
     }
@@ -101,6 +116,13 @@ class SiteChatUser extends Component
             ->where('code', $this->code)
             ->where('email', Auth::user()->email)
             ->delete();
+
+        // 채팅 수 감소
+        DB::table('site_chat')
+            ->where('code', $this->code)
+            ->decrement('user_cnt');
+
+        $this->dispatch('refresh-user');
     }
 
     public function checkPassword()
@@ -113,6 +135,11 @@ class SiteChatUser extends Component
                     'email' => Auth::user()->email,
                     'user_id' => Auth::user()->id
                 ]);
+
+                // 채팅 수 증가
+                DB::table('site_chat')
+                    ->where('code', $this->code)
+                    ->increment('user_cnt');
 
                 $this->password = null;
                 $this->message = null;

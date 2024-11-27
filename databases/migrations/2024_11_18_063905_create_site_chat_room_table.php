@@ -22,17 +22,24 @@ return new class extends Migration
 
             // 채팅방 코드
             $table->string('code')->nullable();
+            // 채팅언어
+            $table->string('lang')->default('ko');
 
-            // 참가자
+            // 참가자 정보
             $table->string('email')->nullable();
             $table->string('name')->nullable();
             $table->string('user_id')->nullable();
 
-            $table->string('lang')->nullable();
-
             $table->boolean('is_owner')->default(false); // 방장 여부
 
+            $table->string('llm')->nullable();
+            $table->string('position')->nullable();
+            $table->text('description')->nullable();
 
+
+            // 메시지 확인
+            $table->timestamp('last_checked_at')->nullable(); // 마지막 확인 일자
+            $table->timestamp('last_message_at')->nullable(); // 마지막 메시지 일자
         });
     }
 

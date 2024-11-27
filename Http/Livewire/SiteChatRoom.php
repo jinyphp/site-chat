@@ -13,23 +13,36 @@ use Livewire\Attributes\On;
 
 
 /**
- * 채팅 목록
+ * 채팅방 목록을 출력합니다.
+ * 자신이 속해 있는 채팅방만 출력합니다.
  */
 class SiteChatRoom extends Component
 {
     public $code;
 
+    public $user_id;
+    public $user_name;
+    public $user_email;
+
     use WithFileUploads;
 
     public $popupForm = false;
     public $popupEdit = false;
+    public $popupDelete = false;
+    public $delete_password;
     public $popupWindowWidth = '2xl';
+    public $message;
     public $forms = [];
-    public $viewFile;
 
+    public $viewFile;
 
     public function mount()
     {
+        $user = Auth::user();
+        $this->user_name = $user->name;
+        $this->user_email = $user->email;
+        $this->user_id = $user->id;
+
         if(!$this->viewFile) {
             $this->viewFile = 'jiny-site-chat::site.chat.room';
         }
@@ -41,22 +54,50 @@ class SiteChatRoom extends Component
         $rows = $this->myChat();
         $rows = $this->myChatRoom($rows); // 권환체크
 
+
+        // 마지막 확인 시간 추가
+        foreach($rows as &$row) {
+            //dump($row);
+            $room = DB::table('site_chat_room')
+                ->where('code', $row->code)
+                ->where('email', $this->user_email)
+                ->first();
+            //dump($this->user_id);
+            //dump($room);
+            if($room) {
+                $row->last_checked_at = $room->last_checked_at;
+            } else {
+                $row->last_checked_at = '';
+            }
+        }
+
+        //dd($rows);
+
+
         return view($this->viewFile,[
             'rooms' => $rows
         ]);
     }
 
+    /**
+     * 나의 채팅방
+     */
     private function myChat()
     {
         $rows = DB::table('site_chat')
             ->join('site_chat_room', 'site_chat.code', '=', 'site_chat_room.code')
             ->where('site_chat_room.email', Auth::user()->email)
             ->select('site_chat.*')
+            ->orderBy('last_message_at', 'desc') // 마지막 메시지 순서
             ->paginate(8);
 
         return $rows;
     }
 
+    /**
+     * owner
+     * 나의 채팅방 권환체크
+     */
     private function myChatRoom($rows)
     {
         // 채팅방 정보, 권환체크
@@ -92,12 +133,24 @@ class SiteChatRoom extends Component
         if(isset($this->forms['title'])) {
             // 채팅방 코드 생성
             $hash = hash('sha256', $this->forms['title'] . date('Y-m-d H:i:s'));
-            $this->forms['code'] = substr($hash, 0, 8);
+            $code = substr($hash, 0, 8);
+            $this->forms['code'] = $code;
             $this->forms['created_at'] = date('Y-m-d H:i:s');
 
             // 초대 코드 셍성
             $this->forms['invite'] = $hash;
+            $this->forms['user_cnt'] = 1;
 
+            // 코드 중복 체크
+            $exists = DB::table('site_chat')
+                ->where('code', $code)
+                ->exists();
+            if ($exists) {
+                $this->message = "이미 존재하는 채팅방 코드입니다.";
+                return;
+            }
+
+            // 채팅방 데이터 저장
             DB::table('site_chat')->insert($this->forms);
             $this->popupForm = false;
         }
@@ -183,50 +236,52 @@ class SiteChatRoom extends Component
             $table->string('user_id')->nullable();
             $table->string('user_name')->nullable();
 
+            // 읽음 표시
+            $table->string('is_read')->nullable();
+
+            // 관리자
             $table->string('manager')->nullable();
         });
+
 
         // 채팅방 목록에, 참여 맴버 추가
         // 개설한 사용자는 방장이다.
         DB::table('site_chat_room')
         ->insert([
             'code' => $this->forms['code'],
-            'email' => Auth::user()->email,
-            'user_id' => Auth::user()->id,
+
+            'email' => $this->user_email,
+            'user_id' => $this->user_id,
+            'name' => $this->user_name,
+
+            'lang' => 'ko',
+
             'is_owner' => true, // 방장 여부
         ]);
 
     }
 
-    public function delete($id)
-    {
-        DB::table('site_chat')->where('id', $id)->delete();
 
-        // 채팅방 삭제
-        // 채팅방 코드 조회
-        $code = DB::table('site_chat')->where('id', $id)->value('code');
-        if($code) {
-            // sqlite 파일 삭제
-            $path = database_path('chat');
-            $path .= DIRECTORY_SEPARATOR.substr($code,0,2);
-            $path .= DIRECTORY_SEPARATOR.substr($code,2,2);
-            $path .= DIRECTORY_SEPARATOR.substr($code,4,2);
-
-            $dbfile = $path.'/'.$code.'.sqlite';
-            if(file_exists($dbfile)) {
-                unlink($dbfile);
-            }
-        }
-    }
-
+    /**
+     * 채팅방 수정
+     */
     public function edit($id)
     {
-        $this->popupEdit = true;
+        $row = DB::table('site_chat')
+            ->where('id', $id)
+            ->first();
+        if($row) {
+            $this->forms = get_object_vars($row); // 객체를 배열로 변환
+        } else {
+            $this->forms = [];
+        }
 
-        $row = DB::table('site_chat')->where('id', $id)->first();
-        $this->forms = get_object_vars($row); // 객체를 배열로 변환
+        $this->popupEdit = true;
     }
 
+    /**
+     * 채팅방 수정 저장
+     */
     public function update($id)
     {
         // 이미지 파일이 있는 경우
@@ -271,5 +326,75 @@ class SiteChatRoom extends Component
             ->update($this->forms);
 
         $this->popupEdit = false;
+    }
+
+
+    /**
+     * 채팅방 삭제
+     */
+    public function delete($id)
+    {
+        $this->popupDelete = true;
+
+        $this->forms['id'] = $id;
+        $this->delete_password = '';
+        $this->message = '';
+    }
+
+    /**
+     * 채팅방 삭제 확인
+     */
+    public function deleteConfirm($id)
+    {
+        $row = DB::table('site_chat')->where('id', $id)->first();
+        if(!$row->password) {
+            // 비밀번호가 없는 경우
+            $this->message = '삭제 비밀번호가 미설정 되어 있습니다.';
+            return false;
+        }
+
+        if(!$this->delete_password) {
+            // 비밀번호를 입력하지 않는 경우
+            $this->message = '삭제 비밀번호를 입력하세요.';
+            return false;
+        }
+
+        if($row->password != $this->delete_password) {
+            // 비밀번호 불일치
+            $this->message = '삭제 비밀번호가 일치하지 않습니다.';
+            return false;
+        }
+
+        // 채팅방 데이터베이스 삭제
+        // 채팅방 코드 조회
+        $code = $row->code;
+        if($code) {
+            // sqlite 파일 삭제
+            $path = database_path('chat');
+            $path .= DIRECTORY_SEPARATOR.substr($code,0,2);
+            $path .= DIRECTORY_SEPARATOR.substr($code,2,2);
+            $path .= DIRECTORY_SEPARATOR.substr($code,4,2);
+
+            $dbfile = $path.'/'.$code.'.sqlite';
+            if(file_exists($dbfile)) {
+                unlink($dbfile);
+            }
+        }
+
+        // 이미지 삭제
+        if($row->image) {
+            $path = public_path($row->image);
+            if(file_exists($path)) {
+                unlink($path);
+            }
+        }
+
+        // 사용자 삭제
+        DB::table('site_chat_room')->where('code', $code)->delete();
+
+        // 채팅방 삭제
+        DB::table('site_chat')->where('id', $id)->delete();
+
+        $this->popupDelete = false;
     }
 }

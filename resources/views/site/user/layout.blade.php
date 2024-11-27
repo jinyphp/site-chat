@@ -64,20 +64,19 @@
                 <div class="mb-3">
                     <label class="form-label">언어</label>
                     <select class="form-select" wire:model.defer="forms.lang">
-                        <option value="ko">한국어</option>
-                        <option value="en">영어</option>
-                        <option value="ja">일본어</option>
-                        <option value="zh">중국어</option>
-                        <option value="de">독일어</option>
-                        <option value="fr">프랑스어</option>
-                        <option value="es">스페인어</option>
-                        <option value="pt">포르투갈어</option>
+                        <option value="">언어선택</option>
+
+                        @foreach (DB::table('site_chat_lang')->get() as $lang)
+                            <option value="{{ $lang->lang }}">{{ $lang->name }}</option>
+                        @endforeach
                     </select>
                 </div>
 
                 <div class="mb-3">
                     <label class="form-label">색상</label>
                     <select class="form-select" wire:model.defer="forms.color">
+                        <option value="">색상선택</option>
+
                         <option value="primary">파란색</option>
                         <option value="success">초록색</option>
                         <option value="danger">빨간색</option>

@@ -4,7 +4,7 @@
 
             <div class="d-flex justify-content-between align-items-start">
                 <div>
-                    <h2>{{ $chat->title }}</h2>
+                    <h2>{{ $chat->title }} ({{ $chat->user_cnt }}명)</h2>
                 </div>
                 <div>
                     <!-- Breadcrumb -->

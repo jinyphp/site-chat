@@ -3,6 +3,9 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
+/**
+ * 채팅 메인 페이지
+ */
 Route::middleware(['web','auth'])
 ->name('chat.')
 ->prefix('/home/chat')->group(function () {
@@ -26,3 +29,24 @@ Route::middleware(['web'])
         \Jiny\Site\Chat\Http\Controllers\AssetsController::class,
         'index']);
 });
+
+
+
+if(function_exists('admin_prefix')) {
+    $prefix = admin_prefix();
+
+    Route::middleware(['web','auth', 'admin'])
+    ->name('admin.chat')
+    ->prefix($prefix.'/chat')->group(function () {
+
+        Route::get('/',[\Jiny\Site\Chat\Http\Controllers\Admin\AdminChat::class,
+            "index"]);
+
+        Route::get('/lang',[\Jiny\Site\Chat\Http\Controllers\Admin\AdminChatLang::class,
+            "index"]);
+
+        Route::get('/room/{code}',[\Jiny\Site\Chat\Http\Controllers\Admin\AdminChatRoom::class,
+            "index"]);
+
+    });
+}

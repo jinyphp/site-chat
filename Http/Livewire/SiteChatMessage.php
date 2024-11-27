@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Stichoza\GoogleTranslate\GoogleTranslate;
+use Livewire\Attributes\On;
 
 class SiteChatMessage extends Component
 {
@@ -15,8 +16,11 @@ class SiteChatMessage extends Component
 
     public $search_keyword;
 
-    public $partner_id;
+    //public $partner_id;
     public $user_id;
+    public $user_name;
+    public $user_email;
+
     public $messageText;
     public $direction = 'send';
     public $uploadFile;
@@ -28,16 +32,24 @@ class SiteChatMessage extends Component
     public $selectYear;
 
     public $poll = 5;
+    public $poll_cnt = 0;
     public $lastUpdate;
 
     public $lang = 'ko';
 
     public $language = [];
+    public $chat_members = [];
+
+    public $viewFile;
 
     public function mount()
     {
         $this->partner_id = request()->id;
-        $this->user_id = Auth::user()->id;
+
+        $user = Auth::user();
+        $this->user_name = $user->name;
+        $this->user_email = $user->email;
+        $this->user_id = $user->id;
 
         // 새로운 DB 연결 설정
         // Define a dynamic SQLite connection
@@ -63,14 +75,56 @@ class SiteChatMessage extends Component
         }
         //   $this->years = get_object_vars($years); // 객체를 배열로 변환
 
-        $user = DB::table('site_chat_room')
+
+        // 채팅방 메시지 확인
+        DB::table('site_chat_room')
             ->where('code', $this->code)
-            ->where('email', Auth::user()->email)
-            ->first();
-        $this->lang = $user->lang;
+            ->where('email', $this->user_email)
+            ->update(['last_checked_at' => date('Y-m-d H:i:s')]);
+
+        // 채팅방 참여자 조회
+        $this->getChatMember();
+        //dd($this->chat_members);
+        $this->lang = $this->myLanguage();
+        //dd($this->lang);
 
         // 다국어 컬럼 체크
         $this->checkMessageColumn();
+
+        if(!$this->viewFile) {
+            $this->viewFile = 'jiny-site-chat::site.chat_message.message';
+        }
+
+
+
+
+    }
+
+    private function getChatMember()
+    {
+        $members = DB::table('site_chat_room')
+            ->where('code', $this->code)
+            ->get();
+        $this->chat_members = [];
+        foreach($members as $item) {
+            $this->chat_members[] = get_object_vars($item);
+        }
+
+        //dd($this->chat_members);
+    }
+
+    private function myLanguage($default='ko')
+    {
+        //dd($this->chat_members);
+        foreach($this->chat_members as $item) {
+            if($item['email'] == $this->user_email) {
+                if($item['lang']) {
+                    return $item['lang'];
+                }
+            }
+        }
+
+        return $default;
     }
 
     private function checkMessageColumn()
@@ -130,12 +184,21 @@ class SiteChatMessage extends Component
      */
     private function isChatUser()
     {
-        $isParticipant = DB::table('site_chat_room')
-            ->where('code', $this->code)
-            ->where('email', Auth::user()->email)
-            ->exists();
+        foreach($this->chat_members as $item) {
+            if($item['email'] == $this->user_email) {
+                return true;
+            }
+        }
 
-        return $isParticipant;
+        return false;
+        // //dd($this->user_email);
+        // //dd(Auth::user()->email);
+        // $isParticipant = DB::table('site_chat_room')
+        //     ->where('code', $this->code)
+        //     ->where('email', Auth::user()->email)
+        //     ->exists();
+
+        // return $isParticipant;
     }
 
     public function render()
@@ -145,20 +208,83 @@ class SiteChatMessage extends Component
             return view('jiny-site-chat::site.chat_message.unauthorized');
         }
 
+        $rows = $this->getMessage();
+        $rows = $this->checkReadMember($rows); // 읽음 표시
 
-        $db  = $this->db('chat')->table('site_chat_message');
-        if($this->search_keyword) {
-            $db->where('message', 'like', '%'.$this->search_keyword.'%');
+        foreach($rows as &$item) {
+            $item->message = chatMessageDecrypt($item->message, $this->chat['salt']);
         }
-        $rows  = $db->orderBy('created_at', 'asc')
-            ->paginate(10);
 
-        $viewFile = 'jiny-site-chat::site.chat_message.message';
-        return view($viewFile,[
+        return view($this->viewFile,[
             'rows' => $rows,
         ]);
     }
 
+    #[On('refresh-user')]
+    public function refreshUser()
+    {
+        $this->getChatMember();
+        $this->lang = $this->myLanguage();
+    }
+
+    public function refreshData()
+    {
+        // $this->poll_cnt++;
+        // if($this->poll_cnt > 3) {
+        //     $this->poll_cnt = 0;
+        //     $this->poll +=5;
+        // }
+    }
+
+    private function checkReadMember($rows)
+    {
+        $updateIds = [];
+        foreach($rows as &$item) {
+            // is_read에 $this->user_id가 없는 경우 추가
+            if ($item->is_read) {
+                $readUsers = explode(',', $item->is_read);
+                if (!in_array($this->user_id, $readUsers)) {
+                    $readUsers[] = $this->user_id;
+                    $item->is_read = implode(',', $readUsers);
+                    $updateIds[] = $item->id;
+                }
+            }
+        }
+
+        // 읽음 표시 갱신
+        if(!empty($updateIds)) {
+            $db = $this->db('chat');
+            $updateData = [];
+            foreach($updateIds as $id) {
+                $updateData[] = [
+                    'id' => $id,
+                    'is_read' => $rows->firstWhere('id', $id)->is_read
+                ];
+            }
+
+            $db->table('site_chat_message')
+                ->upsert($updateData, ['id'], ['is_read']);
+        }
+
+        return $rows;
+    }
+
+    private function getMessage()
+    {
+        $db  = $this->db('chat')->table('site_chat_message');
+        if($this->search_keyword) {
+            $db->where('message', 'like', '%'.$this->search_keyword.'%');
+        }
+        $rows = $db->orderBy('created_at', 'desc')
+            ->paginate(10);
+
+        return $rows;
+    }
+
+
+    /**
+     * 메시지 전송
+     */
     public function sendMessage()
     {
         // 메시지 내용이 비어있는지 확인
@@ -166,56 +292,39 @@ class SiteChatMessage extends Component
             return;
         }
 
-        // 메시지
+        // 메시지 암호화를 위한 salt 값 생성
+        //$salt = "jiny-chat-salt";
+
+        // 메시지 암호화
+        $encryptedMessage = chatMessageEncrypt($this->messageText, $this->chat['salt']);
+
+        // 새로운 메시지를 작성합니다.
         $db  = $this->db('chat')->table('site_chat_message');
         $id = $db->insertGetId([
             //'code' => $this->code,
             'lang' => $this->lang,
 
+            'is_read' => $this->user_id,
+
             'user_id' => $this->user_id,
-            'message' => $this->messageText,
+            'message' => $encryptedMessage,
             'direction' => $this->direction,
             'created_at' => now(),
             'updated_at' => now()
         ]);
 
-        // // 다국어 컬럼
-        // $tableName = 'site_chat_message'; // 테이블 이름을 지정하세요.
-        // $columns = $this->db('chat')
-        // ->select("PRAGMA table_info($tableName)");
-        // $hasMessageKoColumn = false;
-        // foreach($columns as $column) {
-        //     if($column->name == 'message_ko') {
-        //         $hasMessageKoColumn = true;
-        //         break;
-        //     }
-        // }
-        // if(!$hasMessageKoColumn) {
-        //     $this->db('chat')->statement("
-        //         ALTER TABLE site_chat_message
-        //         ADD COLUMN message_ko TEXT NULL
-        //     ");
-        //     //dd("컬럼이 추가되었습니다.");
-        // } else {
-        //     //dd("컬럼이 이미 존재합니다.");
-        // }
+        // 마지막 메시지 시간 갱신
+        DB::table('site_chat')
+            ->where('code', $this->code)
+            ->update(['last_message_at' => date('Y-m-d H:i:s')]);
 
-        // // 구글 번역 부분 수정
-        // try {
-        //     $tr = new GoogleTranslate('en'); // Translates into English
-        //     $tr->setOptions([
-        //         'verify' => false  // SSL 인증서 확인 비활성화
-        //     ]);
-        //     $messageKo = $tr->setTarget('ko')->translate('Goodbye');
-        //     $db->where('id', $id)->update([
-        //         'message_ko' => $messageKo
-        //     ]);
-        // } catch (\Exception $e) {
-        //     // 번역 실패 시 원본 메시지 저장
-        //     $db->where('id', $id)->update([
-        //         'message_ko' => $this->messageText
-        //     ]);
-        // }
+
+        // 채팅방 확인 시간 갱신
+        DB::table('site_chat_room')
+            ->where('code', $this->code)
+            ->where('email', $this->user_email)
+            ->update(['last_checked_at' => date('Y-m-d H:i:s')]);
+
 
         // 메시지 입력창 초기화
         $this->messageText = '';
@@ -311,6 +420,11 @@ class SiteChatMessage extends Component
             ->where('code', $this->code)
             ->where('email', Auth::user()->email)
             ->delete();
+
+        // 채팅 수 감소
+        DB::table('site_chat')
+            ->where('code', $this->code)
+            ->decrement('user_cnt');
     }
 
 

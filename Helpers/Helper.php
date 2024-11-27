@@ -6,6 +6,43 @@ use Illuminate\Support\Facades\Schema;
 
 use Stichoza\GoogleTranslate\GoogleTranslate;
 
+
+
+// 메시지 암호화
+function chatMessageEncrypt($message, $salt=null) {
+    if(!$salt) {
+        return $message;
+    }
+
+    // base64_encode와 str_rot13을 사용하여 간단한 암호화
+    $encryptedMessage = base64_encode(
+        str_rot13($message . $salt)
+    );
+
+    return $encryptedMessage;
+}
+
+function chatMessageDecrypt($encryptedMessage, $salt=null) {
+    if(!$salt) {
+        return $encryptedMessage;
+    }
+
+    // base64_decode와 str_rot13을 사용하여 복호화
+    $decryptedMessage = str_rot13(
+        base64_decode($encryptedMessage)
+    );
+
+    // salt 값 제거
+    $decryptedMessage = str_replace($salt, '', $decryptedMessage);
+
+    return $decryptedMessage;
+}
+
+
+
+
+
+
 // 새로운 채팅방을 생성합니다.
 function siteNewChat($title) {
     $hash = hash('sha256', $title . date('Y-m-d H:i:s'));
@@ -151,11 +188,17 @@ function chatTranslateTo($msg, $lang, $code) {
 }
 
 function translateByGoogle($msg, $lang) {
-    $tr = new GoogleTranslate($msg->lang);
-    $tr->setOptions([
-        'verify' => false  // SSL 인증서 확인 비활성화
-    ]);
-    return $tr->setTarget($lang)->translate($msg->message);
+    if($msg->lang) {
+        //dd($msg);
+        $tr = new GoogleTranslate($msg->lang);
+        $tr->setOptions([
+            'verify' => false  // SSL 인증서 확인 비활성화
+        ]);
+
+        return $tr->setTarget($lang)->translate($msg->message);
+    }
+
+    return $msg->message;
 }
 
 function chatTranslateSave($msg, $lang, $code) {
