@@ -11,10 +11,14 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
 
 use Jiny\Site\Http\Controllers\SiteController;
-class SiteChatMessage extends SiteController
+use Jiny\License\Http\Controllers\LicenseController;
+class SiteChatMessage extends LicenseController
 {
     public function __construct()
     {
+        // 라이센스 키 설정
+        $this->licenseKey = "chat";
+
         parent::__construct();
         $this->setVisit($this);
 

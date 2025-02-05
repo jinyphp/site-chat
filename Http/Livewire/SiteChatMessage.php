@@ -301,7 +301,7 @@ class SiteChatMessage extends Component
         // 새로운 메시지를 작성합니다.
         $db  = $this->db('chat')->table('site_chat_message');
         $id = $db->insertGetId([
-            //'code' => $this->code,
+            'code' => $this->code,
             'lang' => $this->lang,
 
             'is_read' => $this->user_id,

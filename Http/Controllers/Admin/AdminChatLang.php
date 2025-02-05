@@ -10,16 +10,19 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
 
-use Jiny\WireTable\Http\Controllers\WireTablePopupForms;
-class AdminChatLang extends WireTablePopupForms
+use Jiny\Admin\Http\Controllers\AdminController;
+class AdminChatLang extends AdminController
 {
     public function __construct()
     {
+        // 라이센스 키 설정
+        $this->licenseKey = "chat";
+
         parent::__construct();
         $this->setVisit($this);
 
         ##
-        $this->actions['table'] = "site_chat_lang"; // 테이블 정보
+        $this->actions['table']['name'] = "site_chat_lang"; // 테이블 정보
         $this->actions['paging'] = 10; // 페이지 기본값
 
         $this->actions['view']['list'] = "jiny-site-chat::admin.chat_lang.list";

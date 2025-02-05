@@ -12,7 +12,8 @@ class AssetsController extends Controller
 {
     public function __construct()
     {
-
+        // 라이센스 키 설정
+        $this->licenseKey = "chat";
     }
 
 

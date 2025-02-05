@@ -118,7 +118,7 @@
                                     @if($msg->lang != $lang)
                                     <div class="text-sm" style="border-left: 1px solid #000; padding-left: 10px;">
                                         {{-- {!! nl2br(e($msg->message_ko)) !!} --}}
-                                        {{ chatTranslateTo($msg, $lang, $code) }}
+                                        {{ chatTranslateTo($msg, $lang, $chat['salt']) }}
                                     </div>
                                     @endif
                                 </div>

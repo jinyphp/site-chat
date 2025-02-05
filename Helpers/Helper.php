@@ -7,8 +7,9 @@ use Illuminate\Support\Facades\Schema;
 use Stichoza\GoogleTranslate\GoogleTranslate;
 
 
-
-// 메시지 암호화
+/**
+ * 메시지 암호화
+ */
 function chatMessageEncrypt($message, $salt=null) {
     if(!$salt) {
         return $message;
@@ -22,6 +23,9 @@ function chatMessageEncrypt($message, $salt=null) {
     return $encryptedMessage;
 }
 
+/**
+ * 메시지 복호화
+ */
 function chatMessageDecrypt($encryptedMessage, $salt=null) {
     if(!$salt) {
         return $encryptedMessage;
@@ -39,6 +43,77 @@ function chatMessageDecrypt($encryptedMessage, $salt=null) {
 }
 
 
+
+/**
+ * 메시지 번역
+ */
+function chatTranslateTo($msg, $lang, $salt=null) {
+
+    $column = 'message_'.$lang;
+    if(isset($msg->$column)) {
+        // 이미 번역된 데이터가 존재하는 경우
+        $message = chatMessageDecrypt($msg->$column, $salt);
+        return$message;
+    }
+
+    // 번역 데이터 DB 갱신
+    return chatTranslateSave($msg, $lang, $salt);
+}
+
+/**
+ * 구글 실시간 번역
+ */
+function translateByGoogle($msg, $lang) {
+    if($msg->lang) {
+        //dd($msg);
+        $tr = new GoogleTranslate($msg->lang);
+        $tr->setOptions([
+            'verify' => false  // SSL 인증서 확인 비활성화
+        ]);
+
+        return $tr->setTarget($lang)->translate($msg->message);
+    }
+
+    return $msg->message;
+}
+
+function chatTranslateSave($msg, $lang, $salt=null) {
+    $column = 'message_'.$lang;
+    $code = $msg->code;
+
+    // 구글 실시간 번역
+    $message = translateByGoogle($msg, $lang);
+
+    // 번역 데이터 DB 갱신
+    $path = chatSqlitePath($code);
+    config(['database.connections.chat' => [
+        'driver' => 'sqlite',
+        'database' => $path.DIRECTORY_SEPARATOR.$code.'.sqlite',
+        'prefix' => '',
+        'foreign_key_constraints' => true,
+    ]]);
+
+
+    // 암호화
+    $encryptedMessage = chatMessageEncrypt($message, $salt);
+
+    $connection = DB::connection('chat');
+    $connection->table('site_chat_message')
+        ->where('id', $msg->id)
+        ->update([
+            $column => $encryptedMessage
+        ]);
+
+    return $message;
+}
+
+function chatSqlitePath($code) {
+    $path = database_path('chat');
+    $path .= DIRECTORY_SEPARATOR.substr($code,0,2);
+    $path .= DIRECTORY_SEPARATOR.substr($code,2,2);
+    $path .= DIRECTORY_SEPARATOR.substr($code,4,2);
+    return $path;
+}
 
 
 
@@ -174,62 +249,4 @@ function siteChatAddUser($code, $user_id, $is_owner=false) {
     }
 
     return false;
-}
-
-
-function chatTranslateTo($msg, $lang, $code) {
-    $column = 'message_'.$lang;
-    if(isset($msg->$column)) {
-        return $msg->$column;
-    }
-
-    // 번역 데이터 DB 갱신
-    return chatTranslateSave($msg, $lang, $code);
-}
-
-function translateByGoogle($msg, $lang) {
-    if($msg->lang) {
-        //dd($msg);
-        $tr = new GoogleTranslate($msg->lang);
-        $tr->setOptions([
-            'verify' => false  // SSL 인증서 확인 비활성화
-        ]);
-
-        return $tr->setTarget($lang)->translate($msg->message);
-    }
-
-    return $msg->message;
-}
-
-function chatTranslateSave($msg, $lang, $code) {
-    $column = 'message_'.$lang;
-
-    // 구글 실시간 번역
-    $message = translateByGoogle($msg, $lang);
-
-    // 번역 데이터 DB 갱신
-    $path = chatSqlitePath($code);
-    config(['database.connections.chat' => [
-        'driver' => 'sqlite',
-        'database' => $path.DIRECTORY_SEPARATOR.$code.'.sqlite',
-        'prefix' => '',
-        'foreign_key_constraints' => true,
-    ]]);
-
-    $connection = DB::connection('chat');
-    $connection->table('site_chat_message')
-        ->where('id', $msg->id)
-        ->update([
-            $column => $message
-        ]);
-
-    return $message;
-}
-
-function chatSqlitePath($code) {
-    $path = database_path('chat');
-    $path .= DIRECTORY_SEPARATOR.substr($code,0,2);
-    $path .= DIRECTORY_SEPARATOR.substr($code,2,2);
-    $path .= DIRECTORY_SEPARATOR.substr($code,4,2);
-    return $path;
 }

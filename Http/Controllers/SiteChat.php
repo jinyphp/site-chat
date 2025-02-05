@@ -15,10 +15,15 @@ use Illuminate\Support\Facades\Schema;
  * 채팅 서비스 목록
  */
 use Jiny\Site\Http\Controllers\SiteController;
-class SiteChat extends SiteController
+use Jiny\License\Http\Controllers\LicenseController;
+
+class SiteChat extends LicenseController
 {
     public function __construct()
     {
+        // 라이센스 키 설정
+        $this->licenseKey = "chat";
+
         parent::__construct();
         $this->setVisit($this);
 
